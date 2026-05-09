@@ -2,6 +2,8 @@
 
 A tiny in-browser tool that converts spreadsheet time values between `H:MM` (e.g. `159:21`) and decimal hours (e.g. `159.35`). Drop in an `.xlsx`, `.xls`, or `.csv` and download a converted copy.
 
+**👉 Live demo: <https://morganjlopes.github.io/hours-converter/>**
+
 Nothing is uploaded. Everything happens in your browser.
 
 ## Why
@@ -29,7 +31,7 @@ The math is just `hours + minutes / 60`, rounded to two decimals.
 
 ## Use it
 
-Open [`index.html`](./index.html) in any modern browser, or visit the deployed page (see below). Pick a direction, drop your file, and the converted copy downloads automatically. The output filename is `<original> (decimal).xlsx` or `<original> (H-MM).xlsx`.
+Visit <https://morganjlopes.github.io/hours-converter/>, or open [`index.html`](./index.html) locally in any modern browser. Pick a direction, drop your file, and the converted copy downloads automatically. The output filename is `<original> (decimal hours).xlsx` or `<original> (H-MM hours).xlsx`.
 
 ## Run locally
 
