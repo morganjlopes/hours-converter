@@ -41,6 +41,7 @@
   </script>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
     :root {
       --bg: #f7f7f5;
@@ -102,6 +103,24 @@
     .drop-zone:hover, .drop-zone.dragging {
       border-color: var(--accent);
       background: var(--accent-soft);
+    }
+    .drop-zone.dragging { transform: scale(1.01); }
+    .drop-zone .drag-copy { display: none; font-weight: 500; color: var(--accent); }
+    .drop-zone.dragging .primary,
+    .drop-zone.dragging .hint { display: none; }
+    .drop-zone.dragging .drag-copy { display: block; }
+    .drop-zone {
+      transition: border-color .15s, background .15s, transform .15s;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .drop-zone.shake {
+      animation: shake .35s ease-in-out;
+      border-color: var(--error-fg);
+      background: var(--error-bg);
     }
     .drop-zone .primary {
       font-weight: 500;
@@ -202,7 +221,7 @@
   <div class="container">
     <header>
       <h1>Hours Converter</h1>
-      <p class="lead">Convert spreadsheet time values between <code>H:MM</code> and decimal hours.</p>
+      <p class="lead" id="subtitle">Convert spreadsheet time values between <code>H:MM</code> and decimal hours.</p>
     </header>
 
     <div class="toggle" role="radiogroup" aria-label="Conversion direction">
@@ -215,6 +234,7 @@
     <label for="fileInput" class="drop-zone" id="dropZone">
       <div class="primary"><strong>Choose a file</strong> or drop one here</div>
       <div class="hint">.xlsx, .xls, or .csv</div>
+      <div class="drag-copy">Drop it. Right here. ⏱</div>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
     </label>
 
@@ -320,13 +340,69 @@
     }
 
     function suffixFor(direction) {
-      return direction === "toHMM" ? " (H-MM)" : " (decimal)";
+      // ":" isn't allowed in filenames on most filesystems, so use "-" in H:MM.
+      return direction === "toHMM" ? " (H-MM hours)" : " (decimal hours)";
     }
 
     function setStatus(message, kind = "info") {
       const el = document.getElementById("status");
       el.className = "status show " + kind;
       el.textContent = message;
+    }
+
+    // ----- Playful copy pools ---------------------------------------------
+
+    const SUBTITLES = [
+      "Convert spreadsheet time values between <code>H:MM</code> and decimal hours.",
+      "Because spreadsheets shouldn&rsquo;t do math homework.",
+      "<code>H:MM</code> is fine for clocks. Not for <code>SUM()</code>.",
+      "For everyone who&rsquo;s ever fought a payroll export.",
+      "Decimal hours, on demand."
+    ];
+
+    const SUCCESS_COPY = [
+      (n) => `Done. ${n} value${n === 1 ? "" : "s"} converted.`,
+      (n) => `${n} cell${n === 1 ? "" : "s"} sorted. Your download&rsquo;s on the way.`,
+      (n) => `Time tamed &mdash; ${n} value${n === 1 ? "" : "s"} converted.`,
+      (n) => `It&rsquo;s about time. ${n} value${n === 1 ? "" : "s"} converted.`,
+      (n) => `${n} value${n === 1 ? "" : "s"} decimalized. File downloaded.`
+    ];
+
+    const EMPTY_COPY = [
+      "Hmm, no time values in there. Was it already converted?",
+      "Couldn&rsquo;t find anything time-shaped to convert. Wrong direction maybe?",
+      "Zero matches. Either it&rsquo;s already done, or this is the wrong direction."
+    ];
+
+    const ERROR_COPY = [
+      "Couldn&rsquo;t open that file. Sure it&rsquo;s a spreadsheet?",
+      "That one&rsquo;s not happy. Try a different file?",
+      "Stumbled on that file. Mind trying again?"
+    ];
+
+    function pick(pool) { return pool[Math.floor(Math.random() * pool.length)]; }
+
+    function setStatusHTML(html, kind = "info") {
+      const el = document.getElementById("status");
+      el.className = "status show " + kind;
+      el.innerHTML = html;
+    }
+
+    function celebrate() {
+      if (typeof confetti !== "function") return;
+      const defaults = { startVelocity: 30, spread: 70, ticks: 60, zIndex: 1000, colors: ["#2563eb", "#16a34a", "#f59e0b", "#ec4899"] };
+      confetti({ ...defaults, particleCount: 80, origin: { y: 0.6 } });
+      setTimeout(() => confetti({ ...defaults, particleCount: 40, angle: 60, spread: 55, origin: { x: 0, y: 0.7 } }), 120);
+      setTimeout(() => confetti({ ...defaults, particleCount: 40, angle: 120, spread: 55, origin: { x: 1, y: 0.7 } }), 240);
+    }
+
+    function shakeDropZone() {
+      const dz = document.getElementById("dropZone");
+      dz.classList.remove("shake");
+      // Force reflow so the animation can re-trigger on consecutive errors
+      void dz.offsetWidth;
+      dz.classList.add("shake");
+      setTimeout(() => dz.classList.remove("shake"), 400);
     }
 
     function downloadConverted(originalName, workbook, direction) {
@@ -346,22 +422,33 @@
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: "array", cellDates: true });
           const count = convertWorkbook(workbook, direction);
+          if (count === 0) {
+            shakeDropZone();
+            setStatusHTML(pick(EMPTY_COPY), "error");
+            return;
+          }
           downloadConverted(file.name, workbook, direction);
-          setStatus(
-            "Converted " + count + " value" + (count === 1 ? "" : "s") + ". Your download should start automatically.",
-            "success"
-          );
+          setStatusHTML(pick(SUCCESS_COPY)(count), "success");
+          celebrate();
         } catch (err) {
           console.error(err);
-          setStatus("Could not process that file: " + err.message, "error");
+          shakeDropZone();
+          setStatusHTML(pick(ERROR_COPY), "error");
         }
       };
-      reader.onerror = () => setStatus("Failed to read file.", "error");
+      reader.onerror = () => {
+        shakeDropZone();
+        setStatusHTML(pick(ERROR_COPY), "error");
+      };
       reader.readAsArrayBuffer(file);
     }
 
     const fileInput = document.getElementById("fileInput");
     const dropZone = document.getElementById("dropZone");
+    const subtitle = document.getElementById("subtitle");
+
+    // Pick a fresh subtitle on every page load.
+    subtitle.innerHTML = pick(SUBTITLES);
 
     fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
 
