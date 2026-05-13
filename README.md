@@ -2,7 +2,7 @@
 
 A tiny in-browser tool that converts spreadsheet time values between `H:MM` (e.g. `159:21`) and decimal hours (e.g. `159.35`). Drop in an `.xlsx`, `.xls`, or `.csv` and download a converted copy.
 
-**👉 Live demo: <https://morganjlopes.github.io/hours-converter/>**
+**👉 Live demo: <https://morganjlopes.github.io/converter-hours/>**
 
 Nothing is uploaded. Everything happens in your browser.
 
@@ -31,13 +31,13 @@ The math is just `hours + minutes / 60`, rounded to two decimals.
 
 ## Use it
 
-Visit <https://morganjlopes.github.io/hours-converter/>, or open [`index.html`](./index.html) locally in any modern browser. Pick a direction, drop your file, and the converted copy downloads automatically. The output filename is `<original> (decimal hours).xlsx` or `<original> (H-MM hours).xlsx`.
+Visit <https://morganjlopes.github.io/converter-hours/>, or open [`index.html`](./index.html) locally in any modern browser. Pick a direction, drop your file, and the converted copy downloads automatically. The output filename is `<original> (decimal hours).xlsx` or `<original> (H-MM hours).xlsx`.
 
 ## Run locally
 
 ```bash
-git clone https://github.com/<your-username>/hours-converter.git
-cd hours-converter
+git clone https://github.com/<your-username>/converter-hours.git
+cd converter-hours
 open index.html        # macOS
 # or just double-click index.html
 ```
@@ -50,12 +50,16 @@ No build step. No dependencies to install — [SheetJS](https://sheetjs.com/) is
 git init
 git add .
 git commit -m "Initial commit"
-gh repo create hours-converter --public --source=. --push
-gh api -X POST repos/:owner/hours-converter/pages \
+gh repo create converter-hours --public --source=. --push
+gh api -X POST repos/:owner/converter-hours/pages \
   -f 'source[branch]=main' -f 'source[path]=/'
 ```
 
-The site will be live at `https://<your-username>.github.io/hours-converter/` within a minute or two.
+The site will be live at `https://<your-username>.github.io/converter-hours/` within a minute or two.
+
+## Related
+
+- [Timestamp Converter](https://github.com/morganjlopes/converter-timestamp) — normalize spreadsheet timestamps to UTC and reformat
 
 ## Tech
 
